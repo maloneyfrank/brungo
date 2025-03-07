@@ -8,7 +8,9 @@ import (
 
 func main() {
 	initializeLogging()
+
 	logger := getLogger()
+
 	inputDir := flag.String("input", ".", "Directory containing Go handler code")
 	outputDir := flag.String("output", "./bruno", "Directory for Bruno files")
 	flag.Parse()
@@ -25,8 +27,11 @@ func main() {
 	}
 	logger.Info(fmt.Sprintf("Found %d handlers with route annotations", len(routes)))
 
-	// Create the Bruno generator
+	// TODO: take the URL as an input? Need to detect if we already have the directory / bruno.json
+	// and go from there. Moreso the
 	brunoGen := NewBrunoGenerator(*outputDir, "api.example.com")
+
+	// TODO: generate the bruno.json file.
 
 	// Generate Bruno files for each handler with route annotations
 	for _, route := range routes {
