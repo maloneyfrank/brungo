@@ -1,0 +1,6 @@
+{
+  "name": "POST /checkIssuingAdd",
+  "method": "POST",
+  "url": "{{baseUrl}}/checkIssuingAdd",
+  "description": "This route triggers the CheckIssuingAdd event. This sends checks to CheckIssuing in paralel. And handles the updating of the underlying check statuses to reflect the success of the addition of the checks to checkIssuing."
+}
