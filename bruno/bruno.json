@@ -1,0 +1,12 @@
+{
+  "version": "1",
+  "name": "brungo-tests",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ],
+  "presets": {
+    "requestType": "http"
+  }
+}

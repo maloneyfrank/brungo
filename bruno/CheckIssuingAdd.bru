@@ -1,0 +1,48 @@
+meta {
+  name: Check Issuing Add
+  type: http
+}
+
+post {
+  url: api.example.com/checkIssuingAdd
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+  "Amount__c": "",
+  "Check_Serial_Number__c": "",
+  "Class__c": "",
+  "Client_Account__r.Account_Number__c": "",
+  "Client_Account__r.Betr_Client__r.Address_1__c": "",
+  "Client_Account__r.Betr_Client__r.Address_2__c": "",
+  "Client_Account__r.Betr_Client__r.City__c": "",
+  "Client_Account__r.Betr_Client__r.Id": "",
+  "Client_Account__r.Betr_Client__r.Name": "",
+  "Client_Account__r.Betr_Client__r.Name__c": "",
+  "Client_Account__r.Betr_Client__r.State_Code__c": "",
+  "Client_Account__r.Betr_Client__r.Zip_Code__c": "",
+  "Client_Account__r.Id": "",
+  "Effective_Date__c": "",
+  "Id": "",
+  "Memo_1__c": "",
+  "Memo_2__c": "",
+  "Memo_3__c": "",
+  "Name": "",
+  "Payee_Account_Number__c": "",
+  "Payee_Address__r.Address_1__c": "",
+  "Payee_Address__r.Address_2__c": "",
+  "Payee_Address__r.City__c": "",
+  "Payee_Address__r.State_Code__c": "",
+  "Payee_Address__r.Zip_Code__c": "",
+  "Payee__r.Id": "",
+  "Payee__r.Name": "",
+  "Processing_Bank__c": "",
+  "Type__c": ""
+  }
+}
+
+docs {
+  This route triggers the CheckIssuingAdd event. This sends checks to CheckIssuing in paralel. And handles the updating of the underlying check statuses to reflect the success of the addition of the checks to checkIssuing.
+}

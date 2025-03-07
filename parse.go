@@ -12,8 +12,8 @@ import (
 	"strings"
 )
 
-// Annotation patterns
 var (
+	namePattern        = regexp.MustCompile(`@name\s+(.+)`)
 	routePattern       = regexp.MustCompile(`@route\s+([A-Z]+)\s+(.+)`)
 	descriptionPattern = regexp.MustCompile(`@description\s+(.+)`)
 	bodyPattern        = regexp.MustCompile(`@body\s+(\w+)`)
@@ -202,7 +202,8 @@ func (p *Parser) processFuncDecl(funcDecl *ast.FuncDecl, fset *token.FileSet) {
 	// Only process functions with a @route annotation
 	if hasMethod && hasPath {
 		// Create a new route from handler annotations
-		route := Route{
+		route := &Route{
+			Name:        annotations["name"],
 			Method:      method,
 			Path:        path,
 			Handler:     handlerName,
@@ -243,6 +244,11 @@ func (p *Parser) extractAnnotations(comments *ast.CommentGroup) map[string]strin
 	// Extract @body (should be a single line)
 	if matches := bodyPattern.FindStringSubmatch(commentText); len(matches) > 1 {
 		result["body"] = matches[1]
+	}
+
+	// Extract @body (should be a single line)
+	if matches := namePattern.FindStringSubmatch(commentText); len(matches) > 1 {
+		result["name"] = matches[1]
 	}
 
 	// Extract @description (can be multi-line)
