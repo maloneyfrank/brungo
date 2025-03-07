@@ -6,49 +6,48 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"text/template"
 )
 
-// BrunoGenerator generates Bruno .bru files from route information
 type BrunoGenerator struct {
 	OutputDir string
+	Config    *BrunoCollectionConfig
 }
 
-// NewBrunoGenerator creates a new BrunoGenerator
+type BrunoMetadata struct {
+	Name     string `json:"name"`
+	Type     string `json:"type"`
+	Sequence string `json:"seq"`
+}
+
+type BrunoRequestData struct {
+	URL      string `json:"URL"`
+	BodyType string `json:"body"` // focusing on JSON for time being.
+	Auth     string `json:"auth"` // currently not supported.
+}
+
+type BrunoRequestDocs struct {
+	Docs string `json:"docs"`
+}
+
+type BrunoCollectionConfig struct {
+}
+
+const JSONOutputIndent = "  "
+
+// TODO: consider what configuration may be useful on this.
+// Base url / collection level settings.
+// We are really generating a collection at a time here.
+
 func NewBrunoGenerator(outputDir string) *BrunoGenerator {
 	return &BrunoGenerator{
 		OutputDir: outputDir,
+		Config:    &BrunoCollectionConfig{},
 	}
 }
 
-// BruFileTemplate defines the template for .bru files
-const BruFileTemplate = `
-meta {
-  name: {{.Name}}
-  type: http
-  seq: 1
-}
-
-{{.Method | toLower}} {
-  url: {{.URL}}
-  body: json
-  auth: none
-}
-{{if .HasBody}}
-body:json {
-  {{.Body}}
-}
-{{end}}
-{{if .Description}}
-docs {
-  {{.Description}}
-}
-{{end}}
-`
-
-// GenerateRequestFile generates a Bruno .bru file for a single route
 func (g *BrunoGenerator) GenerateRequestFile(route Route) error {
-	// Create a unique name for the file
+
+	// TODO: rework this naming paradigm to use the name of the
 	fileName := fmt.Sprintf("%s_%s", strings.ToLower(route.Method),
 		strings.ReplaceAll(strings.ReplaceAll(route.Path, "/", "_"), ":", "_"))
 	filePath := filepath.Join(g.OutputDir, fileName+".bru")
@@ -56,58 +55,37 @@ func (g *BrunoGenerator) GenerateRequestFile(route Route) error {
 	// Prepare template data
 	var bodyJSON string
 	if route.RequestBody != nil {
-		bodyJSON = generateRequestBody(route.RequestBody)
+		bodyJSON = generateRequestBodySection(route.RequestBody)
 	}
 
-	data := struct {
-		Name        string
-		Method      string
-		URL         string
-		HasBody     bool
-		Body        string
-		Description string
-	}{
-		Name:        fmt.Sprintf("%s %s", route.Method, route.Path),
-		Method:      route.Method,
-		URL:         "{{baseUrl}}" + route.Path,
-		HasBody:     route.RequestBody != nil,
-		Body:        bodyJSON,
-		Description: route.Description,
-	}
-
-	// Create template with custom function
-	tmpl := template.New("brufile")
-	tmpl.Funcs(template.FuncMap{
-		"toLower": strings.ToLower,
-	})
-
-	t, err := tmpl.Parse(BruFileTemplate)
-	if err != nil {
-		return fmt.Errorf("error parsing template: %v", err)
-	}
-
-	// Ensure output directory exists
 	if err := os.MkdirAll(g.OutputDir, 0755); err != nil {
 		return err
 	}
 
-	// Create the file
 	file, err := os.Create(filePath)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
-	// Execute the template
-	if err := t.Execute(file, data); err != nil {
-		return err
-	}
-
 	return nil
 }
 
-// generateRequestBody creates a JSON template from struct fields
-func generateRequestBody(requestBody *RequestBody) string {
+func generateBrunoMetaDataSection(route *Route) (string, error) {
+
+	metaData := BrunoMetadata{
+		Name: route.Name,
+		Type: "http",
+	}
+
+	jsonBytes, err := json.MarshalIndent(metaData, "", JSONOutputIndent)
+	if err != nil {
+		return "", err
+	}
+
+}
+
+func generateRequestJSONBodySection(requestBody *RequestBody) string {
 	body := make(map[string]interface{})
 
 	for _, field := range requestBody.Fields {
@@ -133,10 +111,11 @@ func generateRequestBody(requestBody *RequestBody) string {
 	}
 
 	// Convert to JSON
-	jsonBytes, err := json.MarshalIndent(body, "", "  ")
+	jsonBytes, err := json.MarshalIndent(body, "", JSONOutputIndent)
 	if err != nil {
 		return "{}"
 	}
 
-	return string(jsonBytes)
+	return fmt.Sprintf("json.body %s", string(jsonBytes))
+
 }

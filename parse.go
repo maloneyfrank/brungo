@@ -21,10 +21,8 @@ var (
 
 // Parser extracts information about API routes and structures
 type Parser struct {
-	// Map of struct names to struct definitions
 	structs map[string]*RequestBody
-	// Routes extracted from the code
-	routes []Route
+	routes  []Route
 }
 
 // NewParser creates a new Parser

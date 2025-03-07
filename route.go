@@ -1,6 +1,7 @@
 package main
 
 type Route struct {
+	Name        string            // Name annotation
 	Method      string            // HTTP method (GET, POST, etc.)
 	Path        string            // URL path pattern
 	Handler     string            // Name of the handler function
