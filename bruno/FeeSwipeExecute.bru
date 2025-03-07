@@ -1,0 +1,21 @@
+meta {
+  name: Fee Swipe Execute
+  type: http
+}
+
+post {
+  url: api.example.com/feeSwipeExecute
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+  "accountId": ""
+  }
+}
+
+docs {
+  This route handles the execution of a fee swipe for a singular account. The account is passed in via the `accountId` in the request body and should match the Salesforce Id of a fee account.
+
+}

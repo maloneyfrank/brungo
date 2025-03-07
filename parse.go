@@ -80,6 +80,8 @@ func (p *Parser) FindHandlers(filePath string) error {
 		return err
 	}
 
+	// TODO: right now this lets us annotate any function, not just handler funcs.
+
 	// Extract handler annotations
 	ast.Inspect(node, func(n ast.Node) bool {
 		// Look for function declarations (handlers)
@@ -272,11 +274,12 @@ func (p *Parser) ParseStructFromFile(filePath, structName string) (*RequestBody,
 	return requestBody, nil
 }
 
-// extractAnnotations extracts annotations from doc comments
-func (p *Parser) extractAnnotations(doc *ast.CommentGroup) map[string]string {
+// extractAnnotations extracts annotations from comments comments
+func (p *Parser) extractAnnotations(comments *ast.CommentGroup) map[string]string {
 	annotations := make(map[string]string)
 
-	for _, comment := range doc.List {
+	parsingDescription := false
+	for _, comment := range comments.List {
 		text := comment.Text
 
 		// Extract @name
@@ -290,14 +293,36 @@ func (p *Parser) extractAnnotations(doc *ast.CommentGroup) map[string]string {
 			annotations["route_path"] = matches[2]
 		}
 
-		// Extract @description
-		if matches := descriptionPattern.FindStringSubmatch(text); len(matches) > 1 {
-			annotations["description"] = matches[1]
-		}
-
 		// Extract @body
 		if matches := bodyPattern.FindStringSubmatch(text); len(matches) > 1 {
 			annotations["body"] = matches[1]
+		}
+
+		// Extract @description
+		descIndex := strings.Index(text, "@description")
+		if descIndex != -1 || parsingDescription {
+			parsingDescription = true
+
+			var descText string
+			// Get the text after @description
+			if descIndex != -1 {
+				descText = text[descIndex+len("@description"):]
+			} else {
+				descText = text
+			}
+
+			// Find the next annotation tag if there is one
+			nextTagIndex := strings.IndexAny(descText, "@")
+
+			if nextTagIndex != -1 {
+				// Only take the text until the next tag
+				parsingDescription = false
+				descText = descText[:nextTagIndex]
+			}
+
+			descText = strings.TrimSpace(strings.ReplaceAll(descText, "/", ""))
+
+			annotations["description"] += descText + "\n"
 		}
 	}
 
