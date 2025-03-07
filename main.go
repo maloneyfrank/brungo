@@ -28,7 +28,7 @@ func main() {
 	logger.Info("Found %d handlers with route annotations\n", len(routes))
 
 	// Create the Bruno generator
-	brunoGen := NewBrunoGenerator(*outputDir)
+	brunoGen := NewBrunoGenerator(*outputDir, "api.example.com")
 
 	// Generate Bruno files for each handler with route annotations
 	for _, route := range routes {

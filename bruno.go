@@ -23,6 +23,7 @@ type BrunoRequestData struct {
 	URL      string `json:"URL"`
 	BodyType string `json:"body"` // focusing on JSON for time being.
 	Auth     string `json:"auth"` // currently not supported.
+	Method   string `json:"method"`
 }
 
 type BrunoRequestDocs struct {
@@ -30,67 +31,118 @@ type BrunoRequestDocs struct {
 }
 
 type BrunoCollectionConfig struct {
+	BaseURL string
 }
 
 const JSONOutputIndent = "  "
 
-// TODO: consider what configuration may be useful on this.
-// Base url / collection level settings.
-// We are really generating a collection at a time here.
-
-func NewBrunoGenerator(outputDir string) *BrunoGenerator {
+// NewBrunoGenerator creates a new Bruno generator instance
+func NewBrunoGenerator(outputDir string, baseURL string) *BrunoGenerator {
 	return &BrunoGenerator{
 		OutputDir: outputDir,
-		Config:    &BrunoCollectionConfig{},
+		Config: &BrunoCollectionConfig{
+			BaseURL: baseURL,
+		},
 	}
 }
 
-func (g *BrunoGenerator) GenerateRequestFile(route Route) error {
+// GenerateRequestFile generates a Bruno request file for a given route
+func (g *BrunoGenerator) GenerateRequestFile(route *Route) error {
 
-	// TODO: rework this naming paradigm to use the name of the
+	// TODO: rework this naming paradigm to use the name of the route
 	fileName := fmt.Sprintf("%s_%s", strings.ToLower(route.Method),
 		strings.ReplaceAll(strings.ReplaceAll(route.Path, "/", "_"), ":", "_"))
 	filePath := filepath.Join(g.OutputDir, fileName+".bru")
 
-	// Prepare template data
-	var bodyJSON string
-	if route.RequestBody != nil {
-		bodyJSON = generateRequestBodySection(route.RequestBody)
+	metaDataSectionString, err := g.generateBrunoMetaDataSection(route)
+	if err != nil {
+		return err
 	}
 
+	requestSectionString, err := g.generateBrunoRequestSection(route)
+	if err != nil {
+		return err
+	}
+
+	var bodyJSONString string
+	if route.RequestBody != nil {
+		bodyJSONString, err = g.generateRequestJSONBodySection(route.RequestBody)
+		if err != nil {
+			return err
+		}
+	}
+
+	docsSectionString, err := g.GenerateDocsSection(route)
+	if err != nil {
+		return err
+	}
+
+	// Make sure the output directory exists.
 	if err := os.MkdirAll(g.OutputDir, 0755); err != nil {
 		return err
 	}
 
+	// Generate the unique file path.
 	file, err := os.Create(filePath)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
-	return nil
+	sections := []string{
+		metaDataSectionString,
+		requestSectionString,
+		bodyJSONString,
+		docsSectionString,
+	}
+
+	content := strings.Join(sections, "\n\n")
+
+	_, err = file.WriteString(content)
+	return err
 }
 
-func generateBrunoMetaDataSection(route *Route) (string, error) {
-
-	metaData := BrunoMetadata{
+// generateBrunoMetaDataSection creates the metadata section for a Bruno request file
+func (g *BrunoGenerator) generateBrunoMetaDataSection(route *Route) (string, error) {
+	meta := BrunoMetadata{
 		Name: route.Name,
 		Type: "http",
 	}
+	jsonBytes, err := json.MarshalIndent(meta, "", JSONOutputIndent)
+	if err != nil {
+		return "", err
+	}
+	jsonString := strings.ReplaceAll(string(jsonBytes), `"`, "")
+	return fmt.Sprintf("meta %s", jsonString), nil
+}
 
-	jsonBytes, err := json.MarshalIndent(metaData, "", JSONOutputIndent)
+// generateBrunoRequestSection creates the request section for a Bruno request file
+func (g *BrunoGenerator) generateBrunoRequestSection(route *Route) (string, error) {
+	requestData := BrunoRequestData{
+		URL:  g.Config.BaseURL + route.Path,
+		Auth: "none",
+	}
+
+	if route.RequestBody != nil {
+		requestData.BodyType = "json"
+	}
+
+	jsonBytes, err := json.MarshalIndent(requestData, "", JSONOutputIndent)
 	if err != nil {
 		return "", err
 	}
 
+	jsonString := strings.ReplaceAll(string(jsonBytes), `"`, "")
+	methodPrefix := strings.ToLower(route.Method)
+
+	return fmt.Sprintf("%s %s", methodPrefix, jsonString), nil
 }
 
-func generateRequestJSONBodySection(requestBody *RequestBody) string {
+// generateRequestJSONBodySection creates the JSON body section for a Bruno request file
+func (g *BrunoGenerator) generateRequestJSONBodySection(requestBody *RequestBody) (string, error) {
 	body := make(map[string]interface{})
-
 	for _, field := range requestBody.Fields {
 		var defaultValue interface{}
-
 		// Generate default values based on field type
 		switch strings.ToLower(field.Type) {
 		case "string":
@@ -106,16 +158,46 @@ func generateRequestJSONBodySection(requestBody *RequestBody) string {
 		default:
 			defaultValue = nil
 		}
-
 		body[field.JSONName] = defaultValue
 	}
 
 	// Convert to JSON
 	jsonBytes, err := json.MarshalIndent(body, "", JSONOutputIndent)
 	if err != nil {
-		return "{}"
+		return "", err
 	}
 
-	return fmt.Sprintf("json.body %s", string(jsonBytes))
+	return fmt.Sprintf("json.body %s", string(jsonBytes)), nil
+}
 
+// GenerateDocsSection generates documentation section for a Bruno request file
+func (g *BrunoGenerator) GenerateDocsSection(route *Route) (string, error) {
+	docs := BrunoRequestDocs{
+		Docs: route.Description,
+	}
+
+	jsonBytes, err := json.MarshalIndent(docs, "", JSONOutputIndent)
+	if err != nil {
+		return "", err
+	}
+
+	jsonString := strings.ReplaceAll(string(jsonBytes), `"`, "")
+	return fmt.Sprintf("docs %s", jsonString), nil
+}
+
+// GenerateCollection generates a complete Bruno collection
+func (g *BrunoGenerator) GenerateCollection(routes []*Route) error {
+	// Create collection directory if it doesn't exist
+	if err := os.MkdirAll(g.OutputDir, 0755); err != nil {
+		return err
+	}
+
+	// Generate each request file
+	for _, route := range routes {
+		if err := g.GenerateRequestFile(route); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

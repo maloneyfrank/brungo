@@ -22,23 +22,24 @@ var (
 // Parser extracts information about API routes and structures
 type Parser struct {
 	structs map[string]*RequestBody
-	routes  []Route
+	routes  []*Route
 }
 
 // NewParser creates a new Parser
 func NewParser() *Parser {
 	return &Parser{
 		structs: make(map[string]*RequestBody),
-		routes:  []Route{},
+		routes:  []*Route{},
 	}
 }
 
 // ParseDirectory parses all Go files in a directory
-func (p *Parser) ParseDirectory(dirPath string) ([]Route, error) {
+func (p *Parser) ParseDirectory(dirPath string) ([]*Route, error) {
 	err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
+
 		if !info.IsDir() && strings.HasSuffix(path, ".go") {
 			if err := p.ParseFile(path); err != nil {
 				return err
