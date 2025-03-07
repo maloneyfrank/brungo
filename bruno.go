@@ -49,9 +49,7 @@ func NewBrunoGenerator(outputDir string, baseURL string) *BrunoGenerator {
 // GenerateRequestFile generates a Bruno request file for a given route
 func (g *BrunoGenerator) GenerateRequestFile(route *Route) error {
 
-	// TODO: rework this naming paradigm to use the name of the route
-	fileName := fmt.Sprintf("%s_%s", strings.ToLower(route.Method),
-		strings.ReplaceAll(strings.ReplaceAll(route.Path, "/", "_"), ":", "_"))
+	fileName := strings.ReplaceAll(route.Name, " ", "")
 	filePath := filepath.Join(g.OutputDir, fileName+".bru")
 
 	metaDataSectionString, err := g.generateBrunoMetaDataSection(route)
